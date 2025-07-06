@@ -1,0 +1,28 @@
+import streamlit as st
+import ollama 
+
+MODEL ="mistral:7b"
+
+st.title(MODEL)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state["messages"]:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+def generate_response():
+   response = ollama.chat(model=MODEL,stream = True, messages = st.session_state.messages)
+   for chunk in response : 
+       token = chunk ["message"]["content"]
+       st.session_state["full_message"] += token
+       yield token 
+if prompt := st.chat_input("ready for your questions ..."):
+    st.session_state.messages.append({"role":"user","content":prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state['full_message'] = ""
+    with st.chat_message("assistant"):
+        stream = generate_response()
+        response = st.write_stream(stream)
+        st.session_state.messages.append({'role':'assistant',"content":response})
+

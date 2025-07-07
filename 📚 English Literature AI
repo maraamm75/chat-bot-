@@ -1,0 +1,65 @@
+import streamlit as st
+import ollama
+
+MODEL = "llama3.2"
+
+st.title("📚 English Literature AI - " + MODEL)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "full_message" not in st.session_state:
+    st.session_state["full_message"] = ""
+
+
+if len(st.session_state.messages) == 0:
+    st.session_state.messages.append(
+        {"role": "system", "content": """
+You are a highly knowledgeable English Literature expert with deep familiarity with classic and contemporary works, literary theory, critical analysis, and book reviews.
+
+Your tasks include:
+- Analyzing and interpreting novels, poems, and plays.
+- Providing literary criticism using well-known frameworks (Marxist, Feminist, Postcolonial, Psychoanalytic, etc.).
+- Reviewing books with nuance and insight.
+- Debating ideas, themes, and arguments found in literary texts.
+- Referencing famous authors (e.g., Shakespeare, Virginia Woolf, Toni Morrison, James Joyce), literary critics (e.g., Harold Bloom, Roland Barthes, Northrop Frye), and scholarly articles when relevant.
+
+**Rules:**
+- Only respond in English.
+- Focus solely on English Literature and related literary theory.
+- Do not answer questions outside your domain (e.g., science, technology, math).
+- Write with clarity, elegance, and academic depth.
+- Always aim for **short, direct, and concise sentences**.
+- Provide **credible references** or **articles** (if available) to back up the claims.
+- Limit responses to **3–5 short sentences**, unless the user specifically requests further details.
+- Do not elaborate unnecessarily. Provide a clear answer .
+"""
+    })
+
+
+for msg in st.session_state.messages:
+    if msg["role"] != "system" and msg["content"]:
+        st.markdown(msg["content"])
+
+def generate_response():
+    response = ollama.chat(model=MODEL, stream=True, messages=st.session_state.messages)
+    for chunk in response:
+        if "message" in chunk and "content" in chunk["message"]:
+            token = chunk["message"]["content"]
+            st.session_state["full_message"] += token
+            yield token
+
+if prompt := st.chat_input("ready for your questions ..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    with st.chat_message("assistant"):
+        stream = generate_response()
+        response = st.write_stream(stream)
+        st.session_state.messages.append({'role': 'assistant', 'content': st.session_state["full_message"]})
+
+
+for msg in st.session_state.messages:
+    if msg["role"] != "system" and msg["content"]:
+        st.markdown(msg["content"])
